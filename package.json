@@ -1,9 +1,9 @@
 {
-  "name": "trello-powerup-full-sample",
-  "version": "1.0.1",
-  "description": "This package provides a ready-made Trello Power-Up that can be used to build new Power-Ups. It is used by the create-trello-powerup package to generate user-defined Power-Ups automatically.",
+  "name": "markupable-trello-image",
+  "version": "1.0.0",
+  "description": "Trello Power-Up for annotating image attachments with scribbles, dots, and threaded text notes.",
   "main": "index.js",
-  "author": "Optro",
+  "author": "Markupable",
   "license": "MIT",
   "scripts": {
     "build": "webpack --config webpack.config.ts --mode=production",
@@ -18,14 +18,10 @@
   "dependencies": {
     "@optro/ui-react": "^1.0.27",
     "core-js": "^3.9.1",
-    "lottie-react": "^2.1.0",
     "react": "^17.0.1",
-    "react-color": "^2.19.3",
     "react-dom": "^17.0.1",
-    "react-markdown": "^5.0.3",
     "react-router": "^5.2.0",
-    "react-router-dom": "^5.2.0",
-    "unique-names-generator": "^4.4.0"
+    "react-router-dom": "^5.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.13.10",
@@ -41,7 +37,6 @@
     "@types/node-static": "^0.7.6",
     "@types/nodemon": "^1.19.0",
     "@types/react": "^17.0.3",
-    "@types/react-color": "^3.0.4",
     "@types/react-dom": "^17.0.2",
     "@types/react-router": "^5.1.12",
     "@types/react-router-dom": "^5.1.7",

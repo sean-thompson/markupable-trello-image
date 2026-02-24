@@ -1,20 +1,30 @@
 import {Trello} from '../types/trello';
 import {CapabilityProps} from '../types/power-up';
+import {getMarkupData, getAnnotationsForAttachment} from '../api/power-up';
+import {isImageAttachment} from '../lib/data-model';
 
-export function getAttachmentSection(t: Trello.PowerUp.IFrame, options: {entries: Trello.PowerUp.Attachment[]}, props: CapabilityProps): Trello.PowerUp.AttachmentSection[] {
-    const claimed = options.entries.filter(function (attachment: Trello.PowerUp.Attachment) {
-        return attachment.url.indexOf('https://www.optro.cloud') === 0;
+export async function getAttachmentSection(
+    t: Trello.PowerUp.IFrame,
+    options: { entries: Trello.PowerUp.Attachment[] },
+    props: CapabilityProps
+): Promise<Trello.PowerUp.AttachmentSection[]> {
+    const data = await getMarkupData(t);
+
+    // Filter to image attachments that have annotations
+    const claimed = options.entries.filter((attachment: Trello.PowerUp.Attachment) => {
+        if (!isImageAttachment(attachment as any)) return false;
+        const annotations = getAnnotationsForAttachment(data, attachment.id);
+        return annotations.length > 0;
     });
-    if (claimed && claimed.length > 0) {
+
+    if (claimed.length > 0) {
         return [{
             claimed: claimed,
             icon: props.baseUrl + props.icon.dark,
-            title: 'Example Attachment Section',
+            title: 'Marked-up Images',
             content: {
                 type: 'iframe',
-                url: t.signUrl('./attachment-section.html', {
-                    arg: 'Argument Here'
-                }),
+                url: t.signUrl('./attachment-section.html'),
                 height: 230
             }
         }];

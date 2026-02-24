@@ -1,16 +1,17 @@
 import {Trello} from '../types/trello';
-import {CapabilityProps, Note} from '../types/power-up';
-import {getCardNotes} from '../api/power-up';
+import {CapabilityProps} from '../types/power-up';
+import {getMarkupData, getAnnotationCount} from '../api/power-up';
 
 async function getDetailBadge(t: Trello.PowerUp.IFrame): Promise<Trello.PowerUp.CardBadge> {
-    const notes: Note[] = await getCardNotes(t);
-    if(notes.length === 0) {
+    const data = await getMarkupData(t);
+    const count = getAnnotationCount(data);
+    if (count === 0) {
         throw t.NotHandled();
     } else {
         return {
-            text: `${notes.length} ${notes.length === 1 ? 'Note' : 'Notes'}`,
-            color: 'green',
-            refresh: 10, // in seconds
+            text: `${count} ${count === 1 ? 'Markup' : 'Markups'}`,
+            color: 'blue',
+            refresh: 10,
         };
     }
 }

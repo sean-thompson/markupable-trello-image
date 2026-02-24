@@ -1,18 +1,33 @@
-.note-field {
-    resize: none;
-    height: 100px
+.image-list {
+    padding: 4px;
 }
 
-.color-picker-container {
-    margin: 6px;
+.image-list-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s;
 }
 
-.color-picker-container.unlicensed{
-    filter: blur(4px) saturate(0.1) brightness(1.2);
-    pointer-events: none;
+.image-list-item:hover {
+    background-color: #091e420a;
 }
 
-.color-picker-container.unlicensed::after{
-    content: "This is a pro feature";
-    margin-left: -100%;
+.image-list-thumb {
+    width: 48px;
+    height: 48px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.image-list-name {
+    font-size: 14px;
+    color: #172b4d;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }

@@ -3,7 +3,7 @@ import {Trello} from '../types/trello';
 
 export async function getOnEnable(t: Trello.PowerUp.IFrame, _props: CapabilityProps): Promise<void> {
     await t.alert({
-        message: 'Power-Up installed! Welcome aboard!',
+        message: 'Markupable installed! You can now annotate image attachments.',
         display: 'info',
         duration: 5
     });

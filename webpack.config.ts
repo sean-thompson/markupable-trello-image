@@ -7,8 +7,6 @@ const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin'
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const dev = process.env.NODE_ENV !== 'production';
-// Uncomment if you'd like to analyze the Webpack Bundles
-// const BundleAnalyzerPlugin = require("webpack-bundle-analyzer").BundleAnalyzerPlugin;
 
 const appDirectory = fs.realpathSync(process.cwd());
 const resolveApp = (relativePath: string) => path.resolve(appDirectory, relativePath);
@@ -39,9 +37,6 @@ module.exports = (env: any) => {
                         path.join(path.resolve(__dirname, 'src'), 'dev-watch.ts')
                     ],
                     options: {
-                        // This is a feature of `babel-loader` for Webpack (not Babel itself).
-                        // It enables caching results in ./node_modules/.cache/babel-loader/
-                        // directory for faster rebuilds.
                         cacheDirectory: true,
                         plugins: [
                             dev && require.resolve('react-refresh/babel'),
@@ -81,8 +76,7 @@ module.exports = (env: any) => {
                 'POWERUP_NAME',
                 'POWERUP_ID',
                 'POWERUP_APP_KEY',
-                'CONTEXT_PATH',
-                'OPTRO_API_KEY'
+                'CONTEXT_PATH'
             ]),
             new CopyWebpackPlugin({
                 patterns: [
@@ -90,7 +84,6 @@ module.exports = (env: any) => {
                 ],
             }),
             new MiniCssExtractPlugin(),
-            // new BundleAnalyzerPlugin(),
             new HtmlWebpackPlugin({
                 chunks: ['capabilities'],
                 template: 'templates/index.hbs',
@@ -125,37 +118,17 @@ module.exports = (env: any) => {
                 chunks: ['addon'],
                 template: 'templates/react.hbs',
                 favicon: 'static/favicon.png',
-                filename: 'card-back-section.html',
-                templateParameters: {
-                    powerup_name: process.env.POWERUP_NAME,
-                    powerup_app_key: process.env.POWERUP_APP_KEY
-                }
-            }),
-            new HtmlWebpackPlugin({
-                chunks: ['addon'],
-                template: 'templates/react.hbs',
-                favicon: 'static/favicon.png',
-                filename: 'board-button.html',
-                templateParameters: {
-                    powerup_name: process.env.POWERUP_NAME,
-                    powerup_app_key: process.env.POWERUP_APP_KEY
-                }
-            }),
-            new HtmlWebpackPlugin({
-                chunks: ['addon'],
-                template: 'templates/react.hbs',
-                favicon: 'static/favicon.png',
-                filename: 'show-authorization.html',
-                templateParameters: {
-                    powerup_name: process.env.POWERUP_NAME,
-                    powerup_app_key: process.env.POWERUP_APP_KEY
-                }
-            }),
-            new HtmlWebpackPlugin({
-                chunks: ['addon'],
-                template: 'templates/react.hbs',
-                favicon: 'static/favicon.png',
                 filename: 'show-settings.html',
+                templateParameters: {
+                    powerup_name: process.env.POWERUP_NAME,
+                    powerup_app_key: process.env.POWERUP_APP_KEY
+                }
+            }),
+            new HtmlWebpackPlugin({
+                chunks: ['addon'],
+                template: 'templates/react.hbs',
+                favicon: 'static/favicon.png',
+                filename: 'markup-editor.html',
                 templateParameters: {
                     powerup_name: process.env.POWERUP_NAME,
                     powerup_app_key: process.env.POWERUP_APP_KEY
