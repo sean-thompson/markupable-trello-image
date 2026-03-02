@@ -63,9 +63,11 @@ validateEnvSetup();
 const port = process.env.PORT || 3000;
 console.log(`⏰ ${getCurrentTime()} Creating a tunnel with ngrok for localhost:${port}...`);
 
-const ngrokBin = process.env.NGROK_BIN_PATH || path.join(__dirname, '..', 'node_modules', 'ngrok', 'bin', 'ngrok');
-const ngrokProcess: ChildProcess = spawn(ngrokBin, ['http', String(port)], {
+const ngrokBasePath = path.join(__dirname, '..', 'node_modules', 'ngrok', 'bin', 'ngrok');
+const ngrokBin = process.env.NGROK_BIN_PATH || (process.platform === 'win32' ? ngrokBasePath + '.exe' : ngrokBasePath);
+const ngrokProcess: ChildProcess = spawn(`"${ngrokBin}"`, ['http', String(port)], {
     stdio: ['ignore', 'pipe', 'pipe'],
+    shell: true,
 });
 
 ngrokProcess.stderr?.on('data', (data: Buffer) => {
