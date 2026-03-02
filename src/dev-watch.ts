@@ -2,7 +2,6 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 dotenv.config({path: path.join(__dirname, '..', '.env')});
 import { spawn, ChildProcess } from 'child_process';
-import * as http from 'http';
 import * as nodemon from 'nodemon';
 
 function getCurrentTime(): string {
@@ -24,70 +23,47 @@ function validateEnvSetup() {
     }
 }
 
-function getTunnelUrl(): Promise<string> {
+function waitForTunnel(proc: ChildProcess): Promise<string> {
     return new Promise((resolve, reject) => {
-        http.get('http://127.0.0.1:4040/api/tunnels', (res) => {
-            let data = '';
-            res.on('data', (chunk) => data += chunk);
-            res.on('end', () => {
-                try {
-                    const parsed = JSON.parse(data);
-                    const tunnel = parsed.tunnels.find((t: any) => t.proto === 'https') || parsed.tunnels[0];
-                    if (tunnel) {
-                        resolve(tunnel.public_url);
-                    } else {
-                        reject(new Error('No tunnels found'));
-                    }
-                } catch (e) {
-                    reject(e);
-                }
-            });
-        }).on('error', reject);
+        const timeout = setTimeout(() => reject(new Error('Timed out waiting for cloudflared tunnel')), 30000);
+        proc.stderr?.on('data', (data: Buffer) => {
+            const text = data.toString();
+            const match = text.match(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/);
+            if (match) {
+                clearTimeout(timeout);
+                resolve(match[0]);
+            }
+        });
+        proc.on('error', (err) => { clearTimeout(timeout); reject(err); });
+        proc.on('exit', (code) => {
+            if (code !== null && code !== 0) { clearTimeout(timeout); reject(new Error(`cloudflared exited with code ${code}`)); }
+        });
     });
-}
-
-async function waitForTunnel(retries = 30, delay = 1000): Promise<string> {
-    for (let i = 0; i < retries; i++) {
-        try {
-            return await getTunnelUrl();
-        } catch {
-            await new Promise(r => setTimeout(r, delay));
-        }
-    }
-    throw new Error('Timed out waiting for ngrok tunnel');
 }
 
 console.log(`⏰ ${getCurrentTime()} Checking Environmental Variables`);
 validateEnvSetup();
 
 const port = process.env.PORT || 3000;
-console.log(`⏰ ${getCurrentTime()} Creating a tunnel with ngrok for localhost:${port}...`);
+console.log(`⏰ ${getCurrentTime()} Creating a tunnel with cloudflared for localhost:${port}...`);
 
-const ngrokBasePath = path.join(__dirname, '..', 'node_modules', 'ngrok', 'bin', 'ngrok');
-const ngrokBin = process.env.NGROK_BIN_PATH || (process.platform === 'win32' ? ngrokBasePath + '.exe' : ngrokBasePath);
-const ngrokProcess: ChildProcess = spawn(`"${ngrokBin}"`, ['http', String(port)], {
+const cloudflaredBin = process.env.CLOUDFLARED_BIN_PATH || 'cloudflared';
+const cloudflaredProcess: ChildProcess = spawn(cloudflaredBin, ['tunnel', '--url', `http://localhost:${port}`], {
     stdio: ['ignore', 'pipe', 'pipe'],
-    shell: true,
 });
 
-ngrokProcess.stderr?.on('data', (data: Buffer) => {
+cloudflaredProcess.stdout?.on('data', (data: Buffer) => {
     const msg = data.toString().trim();
-    if (msg) console.error(`ngrok stderr: ${msg}`);
+    if (msg) console.log(`cloudflared: ${msg}`);
 });
 
-ngrokProcess.on('error', (err) => {
-    console.error(`⚠ ${getCurrentTime()} Failed to start ngrok:`, err.message);
+cloudflaredProcess.on('error', (err) => {
+    console.error(`⚠ ${getCurrentTime()} Failed to start cloudflared:`, err.message);
+    console.error('Make sure cloudflared is installed: winget install cloudflare.cloudflared');
     process.exit(1);
 });
 
-ngrokProcess.on('exit', (code) => {
-    if (code !== null && code !== 0) {
-        console.error(`⚠ ${getCurrentTime()} ngrok exited with code ${code}`);
-        process.exit(1);
-    }
-});
-
-waitForTunnel().then((tunnelUrl: string) => {
+waitForTunnel(cloudflaredProcess).then((tunnelUrl: string) => {
     console.log(`✔ ${getCurrentTime()} ${process.env.POWERUP_NAME} tunnel created via ${tunnelUrl}`);
     const managementUrl = process.env.POWERUP_ID === 'UNSPECIFIED' ? 'https://trello.com/power-ups/admin' : `https://trello.com/power-ups/${process.env.POWERUP_ID}/edit`;
     console.log(`⚠ ${getCurrentTime()} Don't forget to update your iFrame Connector URL at ${managementUrl}`);
@@ -98,16 +74,16 @@ waitForTunnel().then((tunnelUrl: string) => {
         ignore: ['src/**/*.spec.ts', 'dev-watch.ts']
     });
 
-    // Stop ngrok on kill
+    // Stop cloudflared on quit
     nodemon.on('quit', () => {
-        console.log(`⚠ ${getCurrentTime()} Stopping ngrok tunnel...`);
-        ngrokProcess.kill();
+        console.log(`⚠ ${getCurrentTime()} Stopping cloudflared tunnel...`);
+        cloudflaredProcess.kill();
     }).on('unhandledRejection', (error: any) => {
         console.log(`⚠ ${getCurrentTime()} Unhandled Exception`, error);
         console.log('To retry, navigate to the Power-Up root directory and run `yarn watch`.');
     });
 }).catch((err: Error) => {
     console.error(`⚠ ${getCurrentTime()} Failed to create tunnel:`, err.message);
-    ngrokProcess.kill();
+    cloudflaredProcess.kill();
     process.exit(1);
 });

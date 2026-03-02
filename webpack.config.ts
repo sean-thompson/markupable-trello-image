@@ -91,7 +91,8 @@ module.exports = (env: any) => {
                 filename: 'index.html',
                 templateParameters: {
                     powerup_id: process.env.POWERUP_ID,
-                    powerup_name: process.env.POWERUP_NAME
+                    powerup_name: process.env.POWERUP_NAME,
+                    powerup_app_key: process.env.POWERUP_APP_KEY
                 }
             }),
             new HtmlWebpackPlugin({
