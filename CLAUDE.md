@@ -10,7 +10,7 @@ drawings, dots, and threaded text notes. See README.md for full details.
 - **4096-character hard limit** on pluginData per card. Every byte matters in the data model.
 - **React 17** (not 18). No concurrent features, no `useId()`, no automatic batching outside events.
 - **Trello client library** loaded via script tag, accessed through `window.TrelloPowerUp`.
-- **OAuth image fetching**: images must be fetched from `api.trello.com` (not `trello.com`) with an OAuth header to avoid CORS blocks.
+- **Server-side image proxy**: Trello attachment images are fetched through a `/trello-image` proxy endpoint to avoid CORS blocks.
 - **No test framework** currently configured. Any test additions would need Jest/Vitest setup.
 
 ## Development Workflow
@@ -18,25 +18,6 @@ drawings, dots, and threaded text notes. See README.md for full details.
 1. Run `npm run watch` (or use `/renew-cloudflared` skill) to start dev server + tunnel.
 2. Update tunnel URL in Trello Power-Up admin (both Iframe Connector URL and Allowed Origins).
 3. Refresh Trello board to pick up changes.
-
-## Codex Review Workflow
-
-This project uses OpenAI Codex for independent review at two points in every non-trivial task:
-
-### Automatic Reviews
-
-1. **Plan review** — After designing a plan but before showing it to the user or implementing, run the codex-review skill in **plan review** mode. Iterate with Codex until APPROVED, then present the reviewed plan.
-
-2. **Code review** — After implementation but before presenting finished code, run the codex-review skill in **code review** mode. Iterate with Codex until APPROVED, then present the results.
-
-### Manual Reviews
-
-The user can type `/codex-review` at any time for an ad-hoc review.
-
-### When to Skip
-
-- Trivial changes (typo fixes, single-line edits, config tweaks)
-- When the user explicitly says to skip review
 
 ## File Layout
 
@@ -69,6 +50,7 @@ src/
     path-encoding.ts       — RDP path compression, coordinate normalization
     render-annotations.ts  — Shared canvas rendering and hit testing
     time-utils.ts          — timeAgo() helper
+    trello-auth.ts         — Trello REST API auth helpers and image proxy
 templates/                 — Handlebars templates for HTML pages
 static/                    — Icons and favicon
 webpack.config.ts          — Build config with HtmlWebpackPlugin per page
