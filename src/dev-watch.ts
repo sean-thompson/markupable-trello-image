@@ -67,6 +67,7 @@ waitForTunnel(cloudflaredProcess).then((tunnelUrl: string) => {
     console.log(`✔ ${getCurrentTime()} ${process.env.POWERUP_NAME} tunnel created via ${tunnelUrl}`);
     const managementUrl = process.env.POWERUP_ID === 'UNSPECIFIED' ? 'https://trello.com/power-ups/admin' : `https://trello.com/power-ups/${process.env.POWERUP_ID}/edit`;
     console.log(`⚠ ${getCurrentTime()} Don't forget to update your iFrame Connector URL at ${managementUrl}`);
+    console.log(`⚠ ${getCurrentTime()} Also add ${tunnelUrl} to "Allowed Origins" on the same page (needed for image auth)`);
 
     // Use nodemon to watch for changes to the server-side code
     nodemon({

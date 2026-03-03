@@ -22,6 +22,12 @@ interface MemberInfo {
 function MarkupEditor() {
     const t = useProvidedTrello();
 
+    // Auth state
+    const [token, setToken] = useState<string | null>(null);
+    const [needsAuth, setNeedsAuth] = useState(false);
+    const [authChecked, setAuthChecked] = useState(false);
+    const [authError, setAuthError] = useState<string | null>(null);
+
     // Params from modal URL
     const [attachmentId, setAttachmentId] = useState('');
     const [attachmentUrl, setAttachmentUrl] = useState('');
@@ -39,6 +45,7 @@ function MarkupEditor() {
     const [noteText, setNoteText] = useState('');
     const [replyText, setReplyText] = useState('');
     const [imageLoaded, setImageLoaded] = useState(false);
+    const [imageError, setImageError] = useState(false);
     const [storageStatus, setStorageStatus] = useState<'ok' | 'warn' | 'block'>('ok');
 
     // Drawing state
@@ -54,11 +61,61 @@ function MarkupEditor() {
     const noteInputRef = useRef<HTMLInputElement>(null);
     const replyInputRef = useRef<HTMLInputElement>(null);
 
+    // Check REST API authorization on mount
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const restApi = (t as any).getRestApi();
+                const authorized = await restApi.isAuthorized();
+                if (authorized) {
+                    const tok = await restApi.getToken();
+                    console.log('[MarkupEditor] auth token:', tok ? `${tok.substring(0, 8)}...` : 'NULL');
+                    if (tok) {
+                        setToken(tok);
+                    } else {
+                        setNeedsAuth(true);
+                    }
+                } else {
+                    setNeedsAuth(true);
+                }
+            } catch (e) {
+                console.error('[MarkupEditor] getRestApi() failed:', e);
+                setNeedsAuth(true);
+            }
+            setAuthChecked(true);
+        };
+        checkAuth();
+    }, []);
+
+    const handleAuthorize = async () => {
+        setAuthError(null);
+        try {
+            const restApi = (t as any).getRestApi();
+            await restApi.authorize({ scope: 'read' });
+            const tok = await restApi.getToken();
+            console.log('[MarkupEditor] authorized, token:', tok ? `${tok.substring(0, 8)}...` : 'NULL');
+            if (tok) {
+                setToken(tok);
+                setNeedsAuth(false);
+            }
+        } catch (e) {
+            console.error('[MarkupEditor] authorize failed:', e);
+            setAuthError('Authorization failed. Make sure your tunnel URL is added to "Allowed Origins" in the Power-Up admin.');
+        }
+    };
+
+    const authenticateUrl = (url: string): string => {
+        if (!token || !process.env.POWERUP_APP_KEY) return url;
+        const sep = url.includes('?') ? '&' : '?';
+        return `${url}${sep}key=${process.env.POWERUP_APP_KEY}&token=${token}`;
+    };
+
     // Initialize: read params and load data
     useEffect(() => {
         const aId = t.arg('attachmentId', '');
         const aUrl = t.arg('attachmentUrl', '');
         const aName = t.arg('attachmentName', '');
+        console.log('[MarkupEditor] args:', { aId, aUrl: aUrl?.substring(0, 80), aName });
         setAttachmentId(aId);
         setAttachmentUrl(aUrl);
         setAttachmentName(aName);
@@ -368,11 +425,38 @@ function MarkupEditor() {
     const annotations = data && attachmentId ? getAnnotationsForAttachment(data, attachmentId) : [];
 
     // Loading state
-    if (!attachmentUrl) {
+    if (!attachmentUrl || !authChecked) {
         return (
             <div className="markup-loading">
                 <div className="markup-loading-spinner" />
                 Loading...
+            </div>
+        );
+    }
+
+    if (needsAuth) {
+        return (
+            <div className="markup-loading">
+                <p>This Power-Up needs permission to display image attachments.</p>
+                <button
+                    onClick={handleAuthorize}
+                    style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#0079BF',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                    }}
+                >
+                    Authorize
+                </button>
+                {authError && (
+                    <p style={{ color: '#c0392b', fontSize: '0.85em', marginTop: '8px' }}>
+                        {authError}
+                    </p>
+                )}
             </div>
         );
     }
@@ -425,18 +509,27 @@ function MarkupEditor() {
             <div className="markup-main">
                 {/* Canvas area */}
                 <div className="markup-canvas-area">
-                    {!imageLoaded && (
+                    {!imageLoaded && !imageError && (
                         <div className="markup-loading">
                             <div className="markup-loading-spinner" />
                             Loading image...
                         </div>
                     )}
+                    {imageError && (
+                        <div className="markup-loading" style={{ color: '#c0392b' }}>
+                            <div style={{ fontSize: '1.2em', fontWeight: 600, marginBottom: 8 }}>Image failed to load</div>
+                            <div style={{ fontSize: '0.85em', color: '#5e6c84', wordBreak: 'break-all', maxWidth: 500, textAlign: 'center' }}>
+                                URL: {attachmentUrl}
+                            </div>
+                        </div>
+                    )}
                     <div className="markup-image-container" ref={containerRef}>
                         <img
                             ref={imgRef}
-                            src={attachmentUrl}
+                            src={authenticateUrl(attachmentUrl)}
                             alt={attachmentName}
-                            onLoad={() => setImageLoaded(true)}
+                            onLoad={() => { console.log('[MarkupEditor] image loaded'); setImageLoaded(true); }}
+                            onError={() => { console.error('[MarkupEditor] image failed to load:', attachmentUrl?.substring(0, 80)); setImageError(true); }}
                             style={{ display: imageLoaded ? 'block' : 'none' }}
                             draggable={false}
                         />
