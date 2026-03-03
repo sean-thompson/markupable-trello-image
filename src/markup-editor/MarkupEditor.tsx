@@ -38,6 +38,9 @@ function MarkupEditor() {
     const [member, setMember] = useState<MemberInfo | null>(null);
     const [memberLookup, setMemberLookup] = useState<{ [id: string]: MemberInfo }>({});
 
+    // Blob URL for the attachment image
+    const [imageBlobUrl, setImageBlobUrl] = useState<string | null>(null);
+
     // UI state
     const [mode, setMode] = useState<EditorMode>('idle');
     const [selectedColor, setSelectedColor] = useState(4); // blue default
@@ -104,11 +107,37 @@ function MarkupEditor() {
         }
     };
 
-    const authenticateUrl = (url: string): string => {
-        if (!token || !process.env.POWERUP_APP_KEY) return url;
-        const sep = url.includes('?') ? '&' : '?';
-        return `${url}${sep}key=${process.env.POWERUP_APP_KEY}&token=${token}`;
+    const fetchAuthenticatedImage = async (url: string): Promise<string> => {
+        const apiUrl = url.replace('https://trello.com/', 'https://api.trello.com/');
+        const response = await fetch(apiUrl, {
+            headers: {
+                'Authorization': `OAuth oauth_consumer_key="${process.env.POWERUP_APP_KEY}", oauth_token="${token}"`
+            }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
     };
+
+    // Fetch image as blob when attachmentUrl and token are ready
+    useEffect(() => {
+        if (!attachmentUrl || !token) return;
+        let revoke: string | null = null;
+
+        fetchAuthenticatedImage(attachmentUrl)
+            .then(blobUrl => {
+                revoke = blobUrl;
+                setImageBlobUrl(blobUrl);
+            })
+            .catch(err => {
+                console.error('[MarkupEditor] blob fetch failed:', err);
+                setImageError(true);
+            });
+
+        return () => {
+            if (revoke) URL.revokeObjectURL(revoke);
+        };
+    }, [attachmentUrl, token]);
 
     // Initialize: read params and load data
     useEffect(() => {
@@ -524,15 +553,17 @@ function MarkupEditor() {
                         </div>
                     )}
                     <div className="markup-image-container" ref={containerRef}>
-                        <img
-                            ref={imgRef}
-                            src={authenticateUrl(attachmentUrl)}
-                            alt={attachmentName}
-                            onLoad={() => { console.log('[MarkupEditor] image loaded'); setImageLoaded(true); }}
-                            onError={() => { console.error('[MarkupEditor] image failed to load:', attachmentUrl?.substring(0, 80)); setImageError(true); }}
-                            style={{ display: imageLoaded ? 'block' : 'none' }}
-                            draggable={false}
-                        />
+                        {imageBlobUrl && (
+                            <img
+                                ref={imgRef}
+                                src={imageBlobUrl}
+                                alt={attachmentName}
+                                onLoad={() => { console.log('[MarkupEditor] image loaded'); setImageLoaded(true); }}
+                                onError={() => { console.error('[MarkupEditor] image failed to load'); setImageError(true); }}
+                                style={{ display: imageLoaded ? 'block' : 'none' }}
+                                draggable={false}
+                            />
+                        )}
                         {imageLoaded && (
                             <canvas
                                 ref={canvasRef}

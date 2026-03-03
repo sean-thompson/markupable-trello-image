@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {useProvidedTrello} from '@optro/ui-react';
 import {isImageAttachment} from '../lib/data-model';
 import './styles.css';
@@ -14,8 +14,12 @@ function CardButton() {
     const t = useProvidedTrello();
     const [images, setImages] = useState<ImageAttachment[]>([]);
     const [loading, setLoading] = useState(true);
-    // Track thumbnail load failures per image id: 0 = preview, 1 = full url, 2 = gave up
-    const [thumbFallback, setThumbFallback] = useState<{ [id: string]: number }>({});
+    // Blob URLs for thumbnails, keyed by image id
+    const [thumbBlobUrls, setThumbBlobUrls] = useState<{ [id: string]: string }>({});
+    // Track which images failed to load (show placeholder)
+    const [thumbFailed, setThumbFailed] = useState<{ [id: string]: boolean }>({});
+    // Ref to track blob URLs for cleanup
+    const blobUrlsRef = useRef<string[]>([]);
 
     // Auth state
     const [token, setToken] = useState<string | null>(null);
@@ -68,10 +72,18 @@ function CardButton() {
         }
     };
 
-    const authenticateUrl = (url: string): string => {
-        if (!token || !process.env.POWERUP_APP_KEY) return url;
-        const sep = url.includes('?') ? '&' : '?';
-        return `${url}${sep}key=${process.env.POWERUP_APP_KEY}&token=${token}`;
+    const fetchAuthenticatedImage = async (url: string): Promise<string> => {
+        const apiUrl = url.replace('https://trello.com/', 'https://api.trello.com/');
+        const response = await fetch(apiUrl, {
+            headers: {
+                'Authorization': `OAuth oauth_consumer_key="${process.env.POWERUP_APP_KEY}", oauth_token="${token}"`
+            }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        blobUrlsRef.current.push(blobUrl);
+        return blobUrl;
     };
 
     useEffect(() => {
@@ -86,6 +98,63 @@ function CardButton() {
             setLoading(false);
         });
     }, []);
+
+    // Fetch thumbnails as blobs once images and token are available
+    useEffect(() => {
+        if (!token || images.length === 0) return;
+
+        const fetchThumbnails = async () => {
+            const results = await Promise.allSettled(
+                images.map(async (img) => {
+                    // Try preview URL first, then fall back to full URL
+                    const thumbUrl = getThumbUrl(img);
+                    try {
+                        const blobUrl = await fetchAuthenticatedImage(thumbUrl);
+                        return { id: img.id, blobUrl };
+                    } catch {
+                        // If preview failed and we used a preview URL, try full URL
+                        if (thumbUrl !== img.url) {
+                            console.warn(`[CardButton] preview fetch failed for "${img.name}", trying full URL`);
+                            const blobUrl = await fetchAuthenticatedImage(img.url);
+                            return { id: img.id, blobUrl };
+                        }
+                        throw new Error('All URLs failed');
+                    }
+                })
+            );
+
+            const newBlobUrls: { [id: string]: string } = {};
+            const newFailed: { [id: string]: boolean } = {};
+            results.forEach((result, idx) => {
+                if (result.status === 'fulfilled') {
+                    newBlobUrls[result.value.id] = result.value.blobUrl;
+                } else {
+                    console.warn(`[CardButton] thumb fetch failed for "${images[idx].name}":`, result.reason);
+                    newFailed[images[idx].id] = true;
+                }
+            });
+            setThumbBlobUrls(prev => ({ ...prev, ...newBlobUrls }));
+            setThumbFailed(prev => ({ ...prev, ...newFailed }));
+        };
+
+        fetchThumbnails();
+    }, [token, images]);
+
+    // Clean up blob URLs on unmount
+    useEffect(() => {
+        return () => {
+            blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
+        };
+    }, []);
+
+    const getThumbUrl = (img: ImageAttachment): string => {
+        if (img.previews && img.previews.length > 0) {
+            const thumb = img.previews.find((p: any) => p.url && p.width >= 150 && p.width <= 300)
+                || img.previews.find((p: any) => p.url);
+            if (thumb) return thumb.url;
+        }
+        return img.url;
+    };
 
     const openEditor = (attachment: ImageAttachment) => {
         // Get the best preview URL or fall back to the attachment URL
@@ -104,7 +173,7 @@ function CardButton() {
             url: './markup-editor.html',
             args: {
                 attachmentId: attachment.id,
-                attachmentUrl: authenticateUrl(imageUrl),
+                attachmentUrl: imageUrl,  // raw URL, MarkupEditor will auth+fetch itself
                 attachmentName: attachment.name
             },
             title: `Markup: ${attachment.name}`,
@@ -154,53 +223,30 @@ function CardButton() {
         );
     }
 
-    const getThumbUrl = (img: ImageAttachment): string | null => {
-        const stage = thumbFallback[img.id] || 0;
-        if (stage === 0) {
-            // Stage 0: try preview URL
-            if (img.previews && img.previews.length > 0) {
-                return (img.previews.find((p: any) => p.width >= 150 && p.width <= 300) || img.previews[0]).url;
-            }
-            // No previews available, skip to full URL
-            return img.url;
-        }
-        if (stage === 1) {
-            // Stage 1: try full attachment URL
-            return img.url;
-        }
-        // Stage 2+: gave up
-        return null;
-    };
-
-    const handleThumbError = (img: ImageAttachment) => {
-        const stage = thumbFallback[img.id] || 0;
-        const nextStage = stage === 0 && img.previews && img.previews.length > 0 ? 1 : 2;
-        console.warn(`[CardButton] thumb failed for "${img.name}" at stage ${stage}, advancing to ${nextStage}`, {
-            url: getThumbUrl(img)?.substring(0, 80)
-        });
-        setThumbFallback(prev => ({ ...prev, [img.id]: nextStage }));
-    };
-
     return (
         <div className="image-list">
             {images.map((img) => {
-                const thumbUrl = getThumbUrl(img);
+                const blobUrl = thumbBlobUrls[img.id];
+                const failed = thumbFailed[img.id];
                 return (
                     <div
                         key={img.id}
                         className="image-list-item"
                         onClick={() => openEditor(img)}
                     >
-                        {thumbUrl ? (
+                        {blobUrl ? (
                             <img
-                                src={authenticateUrl(thumbUrl)}
+                                src={blobUrl}
                                 alt={img.name}
                                 className="image-list-thumb"
-                                onError={() => handleThumbError(img)}
                             />
-                        ) : (
+                        ) : failed ? (
                             <div className="image-list-thumb image-list-thumb-fallback">
                                 {img.name.split('.').pop()?.toUpperCase() || 'IMG'}
+                            </div>
+                        ) : (
+                            <div className="image-list-thumb image-list-thumb-fallback">
+                                ...
                             </div>
                         )}
                         <span className="image-list-name">{img.name}</span>
