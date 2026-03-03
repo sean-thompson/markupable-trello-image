@@ -7,7 +7,10 @@ const ShowSettings = React.lazy(() => import('./show-settings/ShowSettings'));
 const AttachmentSection = React.lazy(() => import('./attachment-sections/AttachmentSection'));
 const MarkupEditor = React.lazy(() => import('./markup-editor/MarkupEditor'));
 
-const t = window.TrelloPowerUp.iframe();
+const t = window.TrelloPowerUp.iframe({
+    appKey: process.env.POWERUP_APP_KEY,
+    appName: process.env.POWERUP_NAME
+});
 
 function PowerupRouter() {
     return (
