@@ -6,6 +6,7 @@ import {
 } from '../api/power-up';
 import {MarkupData, Annotation} from '../types/power-up';
 import {COLORS} from '../lib/data-model';
+import {getAuthenticatedUrl} from '../lib/trello-auth';
 import {Point, pixelToNorm, encodePoints, simplifyPath} from '../lib/path-encoding';
 import {renderAnnotationsOnCanvas, hitTestAnnotation} from '../lib/render-annotations';
 import {timeAgo} from '../lib/time-utils';
@@ -37,9 +38,6 @@ function MarkupEditor() {
     const [data, setData] = useState<MarkupData | null>(null);
     const [member, setMember] = useState<MemberInfo | null>(null);
     const [memberLookup, setMemberLookup] = useState<{ [id: string]: MemberInfo }>({});
-
-    // Blob URL for the attachment image
-    const [imageBlobUrl, setImageBlobUrl] = useState<string | null>(null);
 
     // UI state
     const [mode, setMode] = useState<EditorMode>('idle');
@@ -106,38 +104,6 @@ function MarkupEditor() {
             setAuthError('Authorization failed. Make sure your tunnel URL is added to "Allowed Origins" in the Power-Up admin.');
         }
     };
-
-    const fetchAuthenticatedImage = async (url: string): Promise<string> => {
-        const apiUrl = url.replace('https://trello.com/', 'https://api.trello.com/');
-        const response = await fetch(apiUrl, {
-            headers: {
-                'Authorization': `OAuth oauth_consumer_key="${process.env.POWERUP_APP_KEY}", oauth_token="${token}"`
-            }
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const blob = await response.blob();
-        return URL.createObjectURL(blob);
-    };
-
-    // Fetch image as blob when attachmentUrl and token are ready
-    useEffect(() => {
-        if (!attachmentUrl || !token) return;
-        let revoke: string | null = null;
-
-        fetchAuthenticatedImage(attachmentUrl)
-            .then(blobUrl => {
-                revoke = blobUrl;
-                setImageBlobUrl(blobUrl);
-            })
-            .catch(err => {
-                console.error('[MarkupEditor] blob fetch failed:', err);
-                setImageError(true);
-            });
-
-        return () => {
-            if (revoke) URL.revokeObjectURL(revoke);
-        };
-    }, [attachmentUrl, token]);
 
     // Initialize: read params and load data
     useEffect(() => {
@@ -553,10 +519,10 @@ function MarkupEditor() {
                         </div>
                     )}
                     <div className="markup-image-container" ref={containerRef}>
-                        {imageBlobUrl && (
+                        {attachmentUrl && token && (
                             <img
                                 ref={imgRef}
-                                src={imageBlobUrl}
+                                src={getAuthenticatedUrl(attachmentUrl, token)}
                                 alt={attachmentName}
                                 onLoad={() => { console.log('[MarkupEditor] image loaded'); setImageLoaded(true); }}
                                 onError={() => { console.error('[MarkupEditor] image failed to load'); setImageError(true); }}

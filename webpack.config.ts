@@ -171,6 +171,52 @@ module.exports = (env: any) => {
             hot: true,
             port: 3000,
             disableHostCheck: true,
+            before(app: any) {
+                const https = require('https');
+                app.get('/trello-image', (req: any, res: any) => {
+                    const { url, token } = req.query;
+                    if (!url || !token) return res.status(400).send('Missing url or token');
+
+                    let parsed;
+                    try { parsed = new URL(url); } catch { return res.status(400).send('Invalid URL'); }
+                    if (parsed.hostname !== 'trello.com' && parsed.hostname !== 'api.trello.com') {
+                        return res.status(403).send('Only Trello URLs allowed');
+                    }
+
+                    // Always hit api.trello.com with OAuth header
+                    parsed.hostname = 'api.trello.com';
+                    const options = {
+                        hostname: parsed.hostname,
+                        path: parsed.pathname + parsed.search,
+                        headers: {
+                            'Authorization': `OAuth oauth_consumer_key="${process.env.POWERUP_APP_KEY}", oauth_token="${token}"`
+                        }
+                    };
+
+                    const fetchUrl = (fetchOpts: any) => {
+                        https.get(fetchOpts, (proxyRes: any) => {
+                            // Follow one redirect (Trello → S3/CDN)
+                            if (proxyRes.statusCode >= 300 && proxyRes.statusCode < 400 && proxyRes.headers.location) {
+                                https.get(proxyRes.headers.location, (finalRes: any) => {
+                                    res.writeHead(finalRes.statusCode, {
+                                        'Content-Type': finalRes.headers['content-type'] || 'application/octet-stream',
+                                        'Cache-Control': 'private, max-age=3600'
+                                    });
+                                    finalRes.pipe(res);
+                                }).on('error', () => res.status(502).send('Redirect failed'));
+                            } else {
+                                res.writeHead(proxyRes.statusCode, {
+                                    'Content-Type': proxyRes.headers['content-type'] || 'application/octet-stream',
+                                    'Cache-Control': proxyRes.statusCode === 200 ? 'private, max-age=3600' : 'no-cache'
+                                });
+                                proxyRes.pipe(res);
+                            }
+                        }).on('error', () => res.status(502).send('Failed to fetch from Trello'));
+                    };
+
+                    fetchUrl(options);
+                });
+            },
             stats: {
                 colors: true,
                 hash: false,

@@ -1,6 +1,7 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect} from 'react';
 import {useProvidedTrello} from '@optro/ui-react';
 import {isImageAttachment} from '../lib/data-model';
+import {getAuthenticatedUrl} from '../lib/trello-auth';
 import './styles.css';
 
 interface ImageAttachment {
@@ -14,12 +15,8 @@ function CardButton() {
     const t = useProvidedTrello();
     const [images, setImages] = useState<ImageAttachment[]>([]);
     const [loading, setLoading] = useState(true);
-    // Blob URLs for thumbnails, keyed by image id
-    const [thumbBlobUrls, setThumbBlobUrls] = useState<{ [id: string]: string }>({});
-    // Track which images failed to load (show placeholder)
-    const [thumbFailed, setThumbFailed] = useState<{ [id: string]: boolean }>({});
-    // Ref to track blob URLs for cleanup
-    const blobUrlsRef = useRef<string[]>([]);
+    // Track fallback stage per thumbnail: preview → full → failed
+    const [thumbStage, setThumbStage] = useState<{ [id: string]: 'preview' | 'full' | 'failed' }>({});
 
     // Auth state
     const [token, setToken] = useState<string | null>(null);
@@ -37,7 +34,6 @@ function CardButton() {
                 const authorized = await restApi.isAuthorized();
                 if (authorized) {
                     const tok = await restApi.getToken();
-                    console.log('[CardButton] auth token:', tok ? `${tok.substring(0, 8)}...` : 'NULL');
                     if (tok) {
                         setToken(tok);
                     } else {
@@ -61,7 +57,6 @@ function CardButton() {
             const restApi = (t as any).getRestApi();
             await restApi.authorize({ scope: 'read' });
             const tok = await restApi.getToken();
-            console.log('[CardButton] authorized, token:', tok ? `${tok.substring(0, 8)}...` : 'NULL');
             if (tok) {
                 setToken(tok);
                 setNeedsAuth(false);
@@ -70,20 +65,6 @@ function CardButton() {
             console.error('[CardButton] authorize failed:', e);
             setAuthError('Authorization failed. Make sure your tunnel URL is added to "Allowed Origins" in the Power-Up admin.');
         }
-    };
-
-    const fetchAuthenticatedImage = async (url: string): Promise<string> => {
-        const apiUrl = url.replace('https://trello.com/', 'https://api.trello.com/');
-        const response = await fetch(apiUrl, {
-            headers: {
-                'Authorization': `OAuth oauth_consumer_key="${process.env.POWERUP_APP_KEY}", oauth_token="${token}"`
-            }
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        blobUrlsRef.current.push(blobUrl);
-        return blobUrl;
     };
 
     useEffect(() => {
@@ -99,54 +80,6 @@ function CardButton() {
         });
     }, []);
 
-    // Fetch thumbnails as blobs once images and token are available
-    useEffect(() => {
-        if (!token || images.length === 0) return;
-
-        const fetchThumbnails = async () => {
-            const results = await Promise.allSettled(
-                images.map(async (img) => {
-                    // Try preview URL first, then fall back to full URL
-                    const thumbUrl = getThumbUrl(img);
-                    try {
-                        const blobUrl = await fetchAuthenticatedImage(thumbUrl);
-                        return { id: img.id, blobUrl };
-                    } catch {
-                        // If preview failed and we used a preview URL, try full URL
-                        if (thumbUrl !== img.url) {
-                            console.warn(`[CardButton] preview fetch failed for "${img.name}", trying full URL`);
-                            const blobUrl = await fetchAuthenticatedImage(img.url);
-                            return { id: img.id, blobUrl };
-                        }
-                        throw new Error('All URLs failed');
-                    }
-                })
-            );
-
-            const newBlobUrls: { [id: string]: string } = {};
-            const newFailed: { [id: string]: boolean } = {};
-            results.forEach((result, idx) => {
-                if (result.status === 'fulfilled') {
-                    newBlobUrls[result.value.id] = result.value.blobUrl;
-                } else {
-                    console.warn(`[CardButton] thumb fetch failed for "${images[idx].name}":`, result.reason);
-                    newFailed[images[idx].id] = true;
-                }
-            });
-            setThumbBlobUrls(prev => ({ ...prev, ...newBlobUrls }));
-            setThumbFailed(prev => ({ ...prev, ...newFailed }));
-        };
-
-        fetchThumbnails();
-    }, [token, images]);
-
-    // Clean up blob URLs on unmount
-    useEffect(() => {
-        return () => {
-            blobUrlsRef.current.forEach(url => URL.revokeObjectURL(url));
-        };
-    }, []);
-
     const getThumbUrl = (img: ImageAttachment): string => {
         if (img.previews && img.previews.length > 0) {
             const thumb = img.previews.find((p: any) => p.url && p.width >= 150 && p.width <= 300)
@@ -154,6 +87,19 @@ function CardButton() {
             if (thumb) return thumb.url;
         }
         return img.url;
+    };
+
+    const handleThumbError = (img: ImageAttachment) => {
+        setThumbStage(prev => {
+            const current = prev[img.id] || 'preview';
+            if (current === 'preview' && getThumbUrl(img) !== img.url) {
+                return { ...prev, [img.id]: 'full' };
+            }
+            if (current !== 'failed') {
+                return { ...prev, [img.id]: 'failed' };
+            }
+            return prev;
+        });
     };
 
     const openEditor = (attachment: ImageAttachment) => {
@@ -173,7 +119,7 @@ function CardButton() {
             url: './markup-editor.html',
             args: {
                 attachmentId: attachment.id,
-                attachmentUrl: imageUrl,  // raw URL, MarkupEditor will auth+fetch itself
+                attachmentUrl: imageUrl,
                 attachmentName: attachment.name
             },
             title: `Markup: ${attachment.name}`,
@@ -226,28 +172,29 @@ function CardButton() {
     return (
         <div className="image-list">
             {images.map((img) => {
-                const blobUrl = thumbBlobUrls[img.id];
-                const failed = thumbFailed[img.id];
+                const stage = thumbStage[img.id] || 'preview';
+                const stageUrl = stage === 'full' ? img.url : getThumbUrl(img);
                 return (
                     <div
                         key={img.id}
                         className="image-list-item"
                         onClick={() => openEditor(img)}
                     >
-                        {blobUrl ? (
-                            <img
-                                src={blobUrl}
-                                alt={img.name}
-                                className="image-list-thumb"
-                            />
-                        ) : failed ? (
+                        {!token ? (
+                            <div className="image-list-thumb image-list-thumb-fallback">
+                                ...
+                            </div>
+                        ) : stage === 'failed' ? (
                             <div className="image-list-thumb image-list-thumb-fallback">
                                 {img.name.split('.').pop()?.toUpperCase() || 'IMG'}
                             </div>
                         ) : (
-                            <div className="image-list-thumb image-list-thumb-fallback">
-                                ...
-                            </div>
+                            <img
+                                src={getAuthenticatedUrl(stageUrl, token)}
+                                alt={img.name}
+                                className="image-list-thumb"
+                                onError={() => handleThumbError(img)}
+                            />
                         )}
                         <span className="image-list-name">{img.name}</span>
                     </div>
