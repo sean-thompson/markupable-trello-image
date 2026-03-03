@@ -63,11 +63,12 @@ function AttachmentSection() {
         }
 
         t.modal({
-            url: t.signUrl('./markup-editor.html', {
+            url: './markup-editor.html',
+            args: {
                 attachmentId: img.id,
                 attachmentUrl: imageUrl,
                 attachmentName: img.name
-            }),
+            },
             title: `Markup: ${img.name}`,
             fullscreen: true
         });

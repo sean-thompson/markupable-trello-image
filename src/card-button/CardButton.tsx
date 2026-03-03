@@ -41,11 +41,12 @@ function CardButton() {
         }
 
         t.modal({
-            url: t.signUrl('./markup-editor.html', {
+            url: './markup-editor.html',
+            args: {
                 attachmentId: attachment.id,
                 attachmentUrl: imageUrl,
                 attachmentName: attachment.name
-            }),
+            },
             title: `Markup: ${attachment.name}`,
             fullscreen: true
         });
@@ -82,6 +83,14 @@ function CardButton() {
                             src={thumbUrl}
                             alt={img.name}
                             className="image-list-thumb"
+                            onError={(e) => {
+                                const el = e.currentTarget;
+                                el.style.display = 'none';
+                                const placeholder = document.createElement('div');
+                                placeholder.className = 'image-list-thumb image-list-thumb-fallback';
+                                placeholder.textContent = img.name.split('.').pop()?.toUpperCase() || 'IMG';
+                                el.parentElement?.insertBefore(placeholder, el);
+                            }}
                         />
                         <span className="image-list-name">{img.name}</span>
                     </div>
