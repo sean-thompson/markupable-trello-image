@@ -48,6 +48,7 @@ function MarkupEditor() {
     const [imageLoaded, setImageLoaded] = useState(false);
     const [imageError, setImageError] = useState(false);
     const [storageStatus, setStorageStatus] = useState<'ok' | 'warn' | 'block'>('ok');
+    const [hideMarkup, setHideMarkup] = useState(false);
 
     // Drawing state
     const [currentPath, setCurrentPath] = useState<Point[]>([]);
@@ -161,6 +162,8 @@ function MarkupEditor() {
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        if (hideMarkup) return;
+
         // Render saved annotations
         if (data && attachmentId) {
             const annotations = getAnnotationsForAttachment(data, attachmentId);
@@ -204,7 +207,7 @@ function MarkupEditor() {
                 ctx.stroke();
             }
         }
-    }, [data, attachmentId, selectedAnnotation, currentPath, selectedColor]);
+    }, [data, attachmentId, selectedAnnotation, currentPath, selectedColor, hideMarkup]);
 
     // Resize canvas to match image
     useEffect(() => {
@@ -472,6 +475,15 @@ function MarkupEditor() {
                         />
                     ))}
                 </div>
+                <div className="markup-toolbar-divider" />
+                <button
+                    className="hide-markup-btn"
+                    onMouseDown={() => setHideMarkup(true)}
+                    onMouseUp={() => setHideMarkup(false)}
+                    onMouseLeave={() => setHideMarkup(false)}
+                >
+                    Hide Markup
+                </button>
                 <div className="markup-toolbar-divider" />
                 <span className="markup-toolbar-label" style={{ color: '#172b4d' }}>
                     {attachmentName}
