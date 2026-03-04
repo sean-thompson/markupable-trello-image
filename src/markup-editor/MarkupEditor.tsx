@@ -658,9 +658,6 @@ function MarkupEditor() {
                     ) : (
                         // Annotation list view
                         <>
-                            <div className="sidebar-header">
-                                <h3>Annotations ({annotations.length})</h3>
-                            </div>
                             <div className="sidebar-content">
                                 {annotations.length === 0 ? (
                                     <div className="sidebar-empty">
