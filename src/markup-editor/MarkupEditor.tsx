@@ -567,10 +567,10 @@ function MarkupEditor() {
                             <div className="sidebar-header">
                                 <h3>Annotation #{selectedAnnotation.i + 1}</h3>
                                 <button
-                                    className="sidebar-back-btn"
+                                    className="hide-markup-btn"
                                     onClick={() => setSelectedAnnotation(null)}
                                 >
-                                    Back
+                                    &lt; Back
                                 </button>
                             </div>
                             <div className="sidebar-content">
