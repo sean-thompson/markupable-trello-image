@@ -81,25 +81,32 @@ function AttachmentSection() {
         });
     };
 
+    useEffect(() => {
+        if (images.length > 0) {
+            setTimeout(() => t.sizeTo('#react-root'), 100);
+        }
+    }, [images]);
+
     if (images.length === 0) {
         return null;
     }
 
     return (
-        <div style={{ padding: '8px' }}>
+        <div>
             {images.map(img => (
                 <AttachmentPreview
                     key={img.id}
                     image={img}
                     token={token}
                     onClick={() => openEditor(img)}
+                    onImageLoad={() => t.sizeTo('#react-root')}
                 />
             ))}
         </div>
     );
 }
 
-function AttachmentPreview({ image, token, onClick }: { image: AnnotatedImage; token: string | null; onClick: () => void }) {
+function AttachmentPreview({ image, token, onClick, onImageLoad }: { image: AnnotatedImage; token: string | null; onClick: () => void; onImageLoad: () => void }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
     const t = useProvidedTrello();
@@ -128,16 +135,18 @@ function AttachmentPreview({ image, token, onClick }: { image: AnnotatedImage; t
         if (loaded) drawOverlay();
     }, [loaded, drawOverlay]);
 
+    const handleLoad = () => {
+        setLoaded(true);
+        onImageLoad();
+    };
+
     return (
         <div
             style={{
                 cursor: 'pointer',
-                marginBottom: '8px',
-                borderRadius: '4px',
-                overflow: 'hidden',
-                border: '1px solid #dfe1e6',
-                position: 'relative',
-                display: 'inline-block'
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '12px'
             }}
             onClick={onClick}
         >
@@ -146,8 +155,8 @@ function AttachmentPreview({ image, token, onClick }: { image: AnnotatedImage; t
                     ref={imgRef}
                     src={token ? getAuthenticatedUrl(image.url, token) : image.url}
                     alt={image.name}
-                    style={{ display: 'block', maxHeight: '200px', maxWidth: '100%' }}
-                    onLoad={() => setLoaded(true)}
+                    style={{ display: 'block', maxHeight: '220px', maxWidth: '100%' }}
+                    onLoad={handleLoad}
                 />
                 {loaded && (
                     <canvas
@@ -157,12 +166,14 @@ function AttachmentPreview({ image, token, onClick }: { image: AnnotatedImage; t
                 )}
             </div>
             <div style={{
-                padding: '4px 8px',
+                display: 'flex',
+                flexDirection: 'column' as const,
+                gap: '2px',
                 fontSize: '12px',
-                color: '#5e6c84',
-                background: '#f4f5f7'
+                color: '#5e6c84'
             }}>
-                {image.name} - {image.annotationCount} {image.annotationCount === 1 ? 'annotation' : 'annotations'}
+                <span style={{ fontWeight: 500, color: '#CECFD2', fontSize: '14px' }}>{image.name}</span>
+                <span>{image.annotationCount} {image.annotationCount === 1 ? 'annotation' : 'annotations'}</span>
             </div>
         </div>
     );
