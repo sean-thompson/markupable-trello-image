@@ -5,7 +5,7 @@ import {
     deleteAnnotation, getAnnotationsForAttachment, isNearLimit
 } from '../api/power-up';
 import {MarkupData, Annotation} from '../types/power-up';
-import {COLORS} from '../lib/data-model';
+import {COLORS, getPathStart} from '../lib/data-model';
 import {getAuthenticatedUrl} from '../lib/trello-auth';
 import {Point, pixelToNorm, encodePoints, simplifyPath} from '../lib/path-encoding';
 import {renderAnnotationsOnCanvas, hitTestAnnotation} from '../lib/render-annotations';
@@ -169,7 +169,8 @@ function MarkupEditor() {
             const annotations = getAnnotationsForAttachment(data, attachmentId);
             renderAnnotationsOnCanvas(ctx, annotations, canvas.width, canvas.height, {
                 selectedAnnotationId: selectedAnnotation?.i,
-                dimNonSelected: selectedAnnotation !== null
+                dimNonSelected: selectedAnnotation !== null,
+                skipMarkers: true
             });
         }
 
@@ -556,6 +557,27 @@ function MarkupEditor() {
                                 onClick={handleCanvasClick}
                             />
                         )}
+                        {imageLoaded && !hideMarkup && annotations.map(ann => {
+                            const start = getPathStart(ann.p);
+                            const leftPct = (start.x / 1000) * 100;
+                            const topPct = (start.y / 1000) * 100;
+                            const isSelected = selectedAnnotation?.i === ann.i;
+                            const isDimmed = selectedAnnotation !== null && !isSelected;
+                            return (
+                                <button
+                                    key={ann.i}
+                                    className={`annotation-marker${isSelected ? ' selected' : ''}${isDimmed ? ' dimmed' : ''}`}
+                                    style={{
+                                        left: `${leftPct}%`,
+                                        top: `${topPct}%`,
+                                        backgroundColor: COLORS[ann.c]
+                                    }}
+                                    onClick={() => setSelectedAnnotation(ann)}
+                                >
+                                    {ann.i + 1}
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
 

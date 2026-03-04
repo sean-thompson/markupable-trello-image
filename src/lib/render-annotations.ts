@@ -6,6 +6,7 @@ import {getPathCentroid} from './data-model';
 export interface RenderOptions {
     selectedAnnotationId?: number;
     dimNonSelected?: boolean;
+    skipMarkers?: boolean;
 }
 
 export function renderAnnotationsOnCanvas(
@@ -15,7 +16,7 @@ export function renderAnnotationsOnCanvas(
     canvasHeight: number,
     options: RenderOptions = {}
 ): void {
-    const { selectedAnnotationId, dimNonSelected } = options;
+    const { selectedAnnotationId, dimNonSelected, skipMarkers } = options;
 
     for (const annotation of annotations) {
         const isSelected = selectedAnnotationId === annotation.i;
@@ -55,10 +56,12 @@ export function renderAnnotationsOnCanvas(
 
         ctx.restore();
 
-        // Draw numbered marker at centroid
-        const centroid = getPathCentroid(annotation.p);
-        const centroidPx = normToPixel(centroid.x, centroid.y, canvasWidth, canvasHeight);
-        drawNumberMarker(ctx, centroidPx.x, centroidPx.y, annotation.i + 1, color, alpha, isSelected);
+        // Draw numbered marker at centroid (unless DOM markers are used)
+        if (!skipMarkers) {
+            const centroid = getPathCentroid(annotation.p);
+            const centroidPx = normToPixel(centroid.x, centroid.y, canvasWidth, canvasHeight);
+            drawNumberMarker(ctx, centroidPx.x, centroidPx.y, annotation.i + 1, color, alpha, isSelected);
+        }
     }
 }
 

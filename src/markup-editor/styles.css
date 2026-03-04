@@ -48,6 +48,38 @@
     cursor: crosshair;
 }
 
+/* DOM annotation markers overlaid on image */
+.annotation-marker {
+    position: absolute;
+    transform: translate(-50%, -100%);
+    margin-top: -4px;
+    width: 33px;
+    height: 33px;
+    border-radius: 50%;
+    border: 2.5px solid #fff;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1;
+    transition: transform 0.1s, opacity 0.15s;
+}
+
+.annotation-marker.selected {
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+    z-index: 2;
+}
+
+.annotation-marker.dimmed {
+    opacity: 0.25;
+}
+
 .markup-image-container canvas.drawing-disabled {
     cursor: default;
 }

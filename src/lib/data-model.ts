@@ -9,6 +9,13 @@ export function isImageAttachment(attachment: { name: string; url: string; previ
     return false;
 }
 
+export function getPathStart(path: string): { x: number; y: number } {
+    const first = path.split(';')[0];
+    if (!first) return { x: 500, y: 500 };
+    const [x, y] = first.split(',').map(Number);
+    return { x, y };
+}
+
 export function getPathCentroid(path: string): { x: number; y: number } {
     const points = path.split(';').map(p => {
         const [x, y] = p.split(',').map(Number);
