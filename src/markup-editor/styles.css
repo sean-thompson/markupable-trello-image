@@ -172,6 +172,11 @@
     color: #172b4d;
 }
 
+.hide-markup-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 /* Color picker */
 .color-dot {
     width: 24px;
@@ -402,13 +407,16 @@
 .markup-input-bar input,
 .markup-input-bar textarea {
     flex: 1;
-    padding: 6px 10px;
+    padding: 4px 10px;
+    height: 24px;
+    margin: 0;
     border: 1px solid #dfe1e6;
     border-radius: 4px;
     font-size: 13px;
     font-family: inherit;
     resize: none;
     outline: none;
+    box-sizing: border-box;
 }
 
 .markup-input-bar input:focus,

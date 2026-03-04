@@ -669,8 +669,7 @@ function MarkupEditor() {
                                     }}
                                 />
                                 <button
-                                    className="btn-post"
-                                    disabled={!replyText.trim() || storageStatus === 'block'}
+                                    className="hide-markup-btn"
                                     onClick={handlePostReply}
                                 >
                                     Reply
