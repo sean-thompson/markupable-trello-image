@@ -12,6 +12,7 @@ interface AnnotatedImage {
     url: string;
     previews: any[];
     annotationCount: number;
+    annotations: { index: number; text: string }[];
 }
 
 function AttachmentSection() {
@@ -50,7 +51,8 @@ function AttachmentSection() {
                         name: att.name,
                         url: thumbUrl,
                         previews: att.previews,
-                        annotationCount: annotations.length
+                        annotationCount: annotations.length,
+                        annotations: annotations.map(a => ({ index: a.i + 1, text: a.t || '' }))
                     });
                 }
             }
@@ -173,7 +175,17 @@ function AttachmentPreview({ image, token, onClick, onImageLoad }: { image: Anno
                 color: '#5e6c84'
             }}>
                 <span style={{ fontWeight: 500, color: '#CECFD2', fontSize: '14px' }}>{image.name}</span>
-                <span>{image.annotationCount} {image.annotationCount === 1 ? 'annotation' : 'annotations'}</span>
+                {image.annotations.map(a => (
+                    <span key={a.index} style={{
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        maxWidth: '280px',
+                        display: 'block'
+                    }}>
+                        {a.index}. {a.text}
+                    </span>
+                ))}
             </div>
         </div>
     );
