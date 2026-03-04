@@ -181,7 +181,7 @@ function MarkupEditor() {
             const color = COLORS[selectedColor];
             ctx.strokeStyle = color;
             ctx.fillStyle = color;
-            ctx.lineWidth = 2.5;
+            ctx.lineWidth = 4;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
 

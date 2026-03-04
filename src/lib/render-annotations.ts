@@ -23,7 +23,7 @@ export function renderAnnotationsOnCanvas(
         const isDimmed = dimNonSelected && selectedAnnotationId !== undefined && !isSelected;
         const color = COLORS[annotation.c] || COLORS[4];
         const alpha = isDimmed ? 0.25 : 1;
-        const lineWidth = isSelected ? 4 : 2.5;
+        const lineWidth = isSelected ? 6 : 4;
 
         const strokes = decodeStrokes(annotation.p);
         if (strokes.length === 0) continue;

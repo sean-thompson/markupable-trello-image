@@ -46,6 +46,7 @@
     top: 0;
     left: 0;
     cursor: crosshair;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.15));
 }
 
 /* DOM annotation markers overlaid on image */
