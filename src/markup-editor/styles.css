@@ -177,6 +177,20 @@
     cursor: not-allowed;
 }
 
+.hide-markup-btn.btn-cancel-red {
+    color: #b04632;
+    box-shadow: inset 0 0 0 1px #b04632;
+}
+
+.hide-markup-btn.btn-cancel-red:hover {
+    background: #ffebe6;
+}
+
+.hide-markup-btn.btn-cancel-red:active {
+    background: #f5c6c0;
+    color: #8c2e1f;
+}
+
 /* Color picker */
 .color-dot {
     width: 24px;
@@ -402,6 +416,15 @@
     padding: 8px 12px;
     background: #fff;
     border-top: 1px solid #dfe1e6;
+}
+
+.markup-input-bar-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    background: rgba(255, 255, 255, 0.88);
 }
 
 .markup-input-bar input,

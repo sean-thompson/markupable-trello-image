@@ -319,7 +319,7 @@ function MarkupEditor() {
 
     // Post annotation
     const handlePost = async () => {
-        if (!pendingPath || !member || !attachmentId) return;
+        if (!pendingPath || !member || !attachmentId || !noteText.trim()) return;
 
         try {
             const newData = await addAnnotation(t, attachmentId, member.id, pendingPath, selectedColor, noteText);
@@ -579,6 +579,30 @@ function MarkupEditor() {
                             );
                         })}
                     </div>
+                    {/* Text input bar (when adding new annotation) */}
+                    {mode === 'text-input' && (
+                        <div className="markup-input-bar markup-input-bar-overlay">
+                            <input
+                                ref={noteInputRef}
+                                type="text"
+                                placeholder="Add a note..."
+                                value={noteText}
+                                onChange={e => setNoteText(e.target.value)}
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handlePost();
+                                    }
+                                }}
+                            />
+                            <button className="hide-markup-btn" onClick={handlePost}>
+                                Post
+                            </button>
+                            <button className="hide-markup-btn btn-cancel-red" onClick={handleCancelDraw}>
+                                Cancel
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Sidebar */}
@@ -720,30 +744,6 @@ function MarkupEditor() {
                 </div>
             </div>
 
-            {/* Text input bar (when adding new annotation) */}
-            {mode === 'text-input' && (
-                <div className="markup-input-bar">
-                    <input
-                        ref={noteInputRef}
-                        type="text"
-                        placeholder="Add a note (optional)..."
-                        value={noteText}
-                        onChange={e => setNoteText(e.target.value)}
-                        onKeyDown={e => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handlePost();
-                            }
-                        }}
-                    />
-                    <button className="btn-post" onClick={handlePost}>
-                        Post
-                    </button>
-                    <button className="btn-cancel" onClick={handleCancelDraw}>
-                        Cancel
-                    </button>
-                </div>
-            )}
         </div>
     );
 }
