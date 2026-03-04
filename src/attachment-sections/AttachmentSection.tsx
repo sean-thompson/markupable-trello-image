@@ -4,6 +4,7 @@ import {getMarkupData, getAnnotationsForAttachment} from '../api/power-up';
 import {MarkupData} from '../types/power-up';
 import {isImageAttachment} from '../lib/data-model';
 import {renderAnnotationsOnCanvas} from '../lib/render-annotations';
+import {getAuthenticatedUrl} from '../lib/trello-auth';
 
 interface AnnotatedImage {
     id: string;
@@ -16,8 +17,14 @@ interface AnnotatedImage {
 function AttachmentSection() {
     const t = useProvidedTrello();
     const [images, setImages] = useState<AnnotatedImage[]>([]);
+    const [token, setToken] = useState<string | null>(null);
 
     useEffect(() => {
+        t.getRestApi().isAuthorized().then((authorized: boolean) => {
+            if (authorized) {
+                t.getRestApi().getToken().then((tok: string | null) => setToken(tok));
+            }
+        });
         loadAnnotatedImages();
     }, []);
 
@@ -84,6 +91,7 @@ function AttachmentSection() {
                 <AttachmentPreview
                     key={img.id}
                     image={img}
+                    token={token}
                     onClick={() => openEditor(img)}
                 />
             ))}
@@ -91,7 +99,7 @@ function AttachmentSection() {
     );
 }
 
-function AttachmentPreview({ image, onClick }: { image: AnnotatedImage; onClick: () => void }) {
+function AttachmentPreview({ image, token, onClick }: { image: AnnotatedImage; token: string | null; onClick: () => void }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const imgRef = useRef<HTMLImageElement>(null);
     const t = useProvidedTrello();
@@ -136,7 +144,7 @@ function AttachmentPreview({ image, onClick }: { image: AnnotatedImage; onClick:
             <div style={{ position: 'relative' }}>
                 <img
                     ref={imgRef}
-                    src={image.url}
+                    src={token ? getAuthenticatedUrl(image.url, token) : image.url}
                     alt={image.name}
                     style={{ display: 'block', maxHeight: '200px', maxWidth: '100%' }}
                     onLoad={() => setLoaded(true)}
