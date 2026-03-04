@@ -1,6 +1,6 @@
 import {decodePoints} from './path-encoding';
 
-export const COLORS: string[] = ['#FF3B30', '#FF9500', '#FFCC00', '#34C759', '#007AFF', '#AF52DE'];
+export const COLORS: string[] = ['#11eeb5', '#2193de', '#4633cc', '#b44bad', '#cc3633', '#deac21', '#97ee11'];
 
 export const IMAGE_EXTENSIONS = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
 

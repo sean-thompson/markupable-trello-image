@@ -482,7 +482,7 @@ function MarkupEditor() {
                             className={`color-dot ${selectedColor === idx ? 'selected' : ''} ${selectedAnnotation ? 'disabled' : ''}`}
                             style={{ backgroundColor: color }}
                             onClick={() => !selectedAnnotation && setSelectedColor(idx)}
-                            title={['Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'][idx]}
+                            title={['Mint', 'Blue', 'Purple', 'Magenta', 'Red', 'Gold', 'Lime'][idx]}
                         />
                     ))}
                 </div>
