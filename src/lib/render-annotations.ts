@@ -1,12 +1,13 @@
 import {Annotation} from '../types/power-up';
 import {COLORS} from './data-model';
 import {decodePoints, decodeStrokes, normToPixel} from './path-encoding';
-import {getPathCentroid} from './data-model';
+import {getPathCentroid, getPathStart} from './data-model';
 
 export interface RenderOptions {
     selectedAnnotationId?: number;
     dimNonSelected?: boolean;
     skipMarkers?: boolean;
+    scale?: number; // multiplier for line widths and markers
 }
 
 export function renderAnnotationsOnCanvas(
@@ -17,13 +18,14 @@ export function renderAnnotationsOnCanvas(
     options: RenderOptions = {}
 ): void {
     const { selectedAnnotationId, dimNonSelected, skipMarkers } = options;
+    const scale = options.scale ?? 1;
 
     for (const annotation of annotations) {
         const isSelected = selectedAnnotationId === annotation.i;
         const isDimmed = dimNonSelected && selectedAnnotationId !== undefined && !isSelected;
         const color = COLORS[annotation.c] || COLORS[4];
         const alpha = isDimmed ? 0.25 : 1;
-        const lineWidth = isSelected ? 6 : 4;
+        const lineWidth = (isSelected ? 6 : 4) * scale;
 
         const strokes = decodeStrokes(annotation.p);
         if (strokes.length === 0) continue;
@@ -42,7 +44,7 @@ export function renderAnnotationsOnCanvas(
                 // Dot
                 const px = normToPixel(stroke[0].x, stroke[0].y, canvasWidth, canvasHeight);
                 ctx.beginPath();
-                ctx.arc(px.x, px.y, isSelected ? 6 : 4, 0, Math.PI * 2);
+                ctx.arc(px.x, px.y, (isSelected ? 6 : 4) * scale, 0, Math.PI * 2);
                 ctx.fill();
             } else {
                 const firstPx = normToPixel(stroke[0].x, stroke[0].y, canvasWidth, canvasHeight);
@@ -60,9 +62,9 @@ export function renderAnnotationsOnCanvas(
 
         // Draw numbered marker at centroid (unless DOM markers are used)
         if (!skipMarkers) {
-            const centroid = getPathCentroid(annotation.p);
-            const centroidPx = normToPixel(centroid.x, centroid.y, canvasWidth, canvasHeight);
-            drawNumberMarker(ctx, centroidPx.x, centroidPx.y, annotation.i + 1, color, alpha, isSelected);
+            const start = getPathStart(annotation.p);
+            const startPx = normToPixel(start.x, start.y, canvasWidth, canvasHeight);
+            drawNumberMarker(ctx, startPx.x, startPx.y, annotation.i + 1, color, alpha, isSelected, scale);
         }
     }
 }
@@ -74,28 +76,30 @@ function drawNumberMarker(
     number: number,
     color: string,
     alpha: number,
-    isSelected: boolean
+    isSelected: boolean,
+    scale: number = 1
 ): void {
-    const radius = isSelected ? 14 : 11;
+    const radius = (isSelected ? 14 : 11) * scale;
+    const fontSize = (isSelected ? 13 : 11) * scale;
 
     ctx.save();
     ctx.globalAlpha = alpha;
 
     // Circle background
     ctx.beginPath();
-    ctx.arc(x, y - radius - 4, radius, 0, Math.PI * 2);
+    ctx.arc(x, y - radius - 4 * scale, radius, 0, Math.PI * 2);
     ctx.fillStyle = color;
     ctx.fill();
     ctx.strokeStyle = '#fff';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * scale;
     ctx.stroke();
 
     // Number text
     ctx.fillStyle = '#fff';
-    ctx.font = `bold ${isSelected ? 13 : 11}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(number), x, y - radius - 4);
+    ctx.fillText(String(number), x, y - radius - 4 * scale);
 
     ctx.restore();
 }

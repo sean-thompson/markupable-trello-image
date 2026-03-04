@@ -20,6 +20,23 @@ interface MemberInfo {
     avatar: string | null;
 }
 
+function wrapCanvasText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+    for (const word of words) {
+        const testLine = currentLine ? currentLine + ' ' + word : word;
+        if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+        } else {
+            currentLine = testLine;
+        }
+    }
+    if (currentLine) lines.push(currentLine);
+    return lines;
+}
+
 function MarkupEditor() {
     const t = useProvidedTrello();
 
@@ -401,6 +418,138 @@ function MarkupEditor() {
         }
     };
 
+    // Download annotated image as PNG with sidebar
+    const handleDownload = () => {
+        const img = imgRef.current;
+        if (!img || !data || !attachmentId) return;
+
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        const scale = w / img.clientWidth;
+        const anns = getAnnotationsForAttachment(data, attachmentId);
+
+        // Sidebar sizing
+        const sidebarW = anns.length > 0 ? Math.max(300, Math.round(w * 0.3)) : 0;
+        const pad = Math.round(16 * scale);
+        const font = Math.round(14 * scale);
+        const smallFont = Math.round(12 * scale);
+        const lineH = Math.round(font * 1.5);
+        const smallLineH = Math.round(smallFont * 1.5);
+        const badgeR = Math.round(12 * scale);
+
+        const offscreen = document.createElement('canvas');
+        offscreen.width = w + sidebarW;
+        offscreen.height = h;
+        const ctx = offscreen.getContext('2d');
+        if (!ctx) return;
+
+        // White background
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(0, 0, offscreen.width, h);
+
+        // 1. Draw the base image
+        ctx.drawImage(img, 0, 0, w, h);
+
+        // 2. Draw all annotations (strokes + markers) at full resolution
+        renderAnnotationsOnCanvas(ctx, anns, w, h, { scale });
+
+        // 3. Draw sidebar
+        if (sidebarW > 0) {
+            ctx.fillStyle = '#f4f5f7';
+            ctx.fillRect(w, 0, sidebarW, h);
+
+            // Left border
+            ctx.strokeStyle = '#dfe1e6';
+            ctx.lineWidth = Math.max(1, scale);
+            ctx.beginPath();
+            ctx.moveTo(w, 0);
+            ctx.lineTo(w, h);
+            ctx.stroke();
+
+            const textX = w + pad + badgeR * 2 + Math.round(8 * scale);
+            const textMaxW = sidebarW - pad * 2 - badgeR * 2 - Math.round(8 * scale);
+            let y = pad;
+
+            for (const ann of anns) {
+                if (y > h - pad * 2) break;
+
+                const color = COLORS[ann.c];
+
+                // Number badge
+                const cx = w + pad + badgeR;
+                const cy = y + badgeR;
+                ctx.beginPath();
+                ctx.arc(cx, cy, badgeR, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = `bold ${smallFont}px -apple-system, BlinkMacSystemFont, sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(String(ann.i + 1), cx, cy);
+
+                // Author
+                ctx.fillStyle = '#172b4d';
+                ctx.font = `bold ${font}px -apple-system, BlinkMacSystemFont, sans-serif`;
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillText(resolveUserName(ann.u), textX, y);
+                y += lineH;
+
+                // Note text
+                if (ann.t) {
+                    ctx.fillStyle = '#333';
+                    ctx.font = `${font}px -apple-system, BlinkMacSystemFont, sans-serif`;
+                    for (const line of wrapCanvasText(ctx, ann.t, textMaxW)) {
+                        if (y > h - pad) break;
+                        ctx.fillText(line, textX, y);
+                        y += lineH;
+                    }
+                }
+
+                // Replies
+                if (ann.r.length > 0) {
+                    const replyX = textX + Math.round(12 * scale);
+                    const replyMaxW = textMaxW - Math.round(12 * scale);
+                    for (const reply of ann.r) {
+                        if (y > h - pad) break;
+                        y += Math.round(4 * scale);
+                        ctx.fillStyle = '#5e6c84';
+                        ctx.font = `bold ${smallFont}px -apple-system, BlinkMacSystemFont, sans-serif`;
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'top';
+                        ctx.fillText(resolveUserName(reply.u), replyX, y);
+                        y += smallLineH;
+
+                        ctx.fillStyle = '#444';
+                        ctx.font = `${smallFont}px -apple-system, BlinkMacSystemFont, sans-serif`;
+                        for (const line of wrapCanvasText(ctx, reply.t, replyMaxW)) {
+                            if (y > h - pad) break;
+                            ctx.fillText(line, replyX, y);
+                            y += smallLineH;
+                        }
+                    }
+                }
+
+                // Divider
+                y += Math.round(10 * scale);
+                ctx.strokeStyle = '#dfe1e6';
+                ctx.lineWidth = Math.max(1, Math.round(scale * 0.5));
+                ctx.beginPath();
+                ctx.moveTo(w + pad, y);
+                ctx.lineTo(w + sidebarW - pad, y);
+                ctx.stroke();
+                y += Math.round(10 * scale);
+            }
+        }
+
+        // 4. Trigger download
+        const link = document.createElement('a');
+        link.download = attachmentName.replace(/\.[^.]+$/, '') + '-markup.png';
+        link.href = offscreen.toDataURL('image/png');
+        link.click();
+    };
+
     // Keyboard shortcuts
     useEffect(() => {
         const handler = (e: KeyboardEvent) => {
@@ -494,6 +643,10 @@ function MarkupEditor() {
                     onMouseLeave={() => setHideMarkup(false)}
                 >
                     Hide Markup
+                </button>
+                <div className="markup-toolbar-divider" />
+                <button className="hide-markup-btn" onClick={handleDownload}>
+                    Download
                 </button>
                 <div className="markup-toolbar-divider" />
                 <span className="markup-toolbar-label" style={{ color: '#172b4d' }}>
