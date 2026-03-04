@@ -7,7 +7,7 @@ import {
 import {MarkupData, Annotation} from '../types/power-up';
 import {COLORS, getPathStart} from '../lib/data-model';
 import {getAuthenticatedUrl} from '../lib/trello-auth';
-import {Point, pixelToNorm, encodePoints, simplifyPath} from '../lib/path-encoding';
+import {Point, pixelToNorm, encodePoints, encodeStrokes, simplifyPath} from '../lib/path-encoding';
 import {renderAnnotationsOnCanvas, hitTestAnnotation} from '../lib/render-annotations';
 import {timeAgo} from '../lib/time-utils';
 import './styles.css';
@@ -52,6 +52,7 @@ function MarkupEditor() {
 
     // Drawing state
     const [currentPath, setCurrentPath] = useState<Point[]>([]);
+    const [completedStrokes, setCompletedStrokes] = useState<Point[][]>([]);
     const [pendingPath, setPendingPath] = useState<string | null>(null);
     const isDrawingRef = useRef(false);
     const rawPointsRef = useRef<Point[]>([]);
@@ -174,8 +175,9 @@ function MarkupEditor() {
             });
         }
 
-        // Render current drawing in progress
-        if (currentPath.length > 0) {
+        // Render completed strokes and current in-progress stroke
+        const allPreviewStrokes = [...completedStrokes, ...(currentPath.length > 0 ? [currentPath] : [])];
+        if (allPreviewStrokes.length > 0) {
             const color = COLORS[selectedColor];
             ctx.strokeStyle = color;
             ctx.fillStyle = color;
@@ -183,32 +185,35 @@ function MarkupEditor() {
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
 
-            if (currentPath.length === 1) {
-                const px = {
-                    x: (currentPath[0].x / 1000) * canvas.width,
-                    y: (currentPath[0].y / 1000) * canvas.height
-                };
-                ctx.beginPath();
-                ctx.arc(px.x, px.y, 4, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                ctx.beginPath();
-                const first = {
-                    x: (currentPath[0].x / 1000) * canvas.width,
-                    y: (currentPath[0].y / 1000) * canvas.height
-                };
-                ctx.moveTo(first.x, first.y);
-                for (let i = 1; i < currentPath.length; i++) {
-                    const p = {
-                        x: (currentPath[i].x / 1000) * canvas.width,
-                        y: (currentPath[i].y / 1000) * canvas.height
+            for (const stroke of allPreviewStrokes) {
+                if (stroke.length === 0) continue;
+                if (stroke.length === 1) {
+                    const px = {
+                        x: (stroke[0].x / 1000) * canvas.width,
+                        y: (stroke[0].y / 1000) * canvas.height
                     };
-                    ctx.lineTo(p.x, p.y);
+                    ctx.beginPath();
+                    ctx.arc(px.x, px.y, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.beginPath();
+                    const first = {
+                        x: (stroke[0].x / 1000) * canvas.width,
+                        y: (stroke[0].y / 1000) * canvas.height
+                    };
+                    ctx.moveTo(first.x, first.y);
+                    for (let i = 1; i < stroke.length; i++) {
+                        const p = {
+                            x: (stroke[i].x / 1000) * canvas.width,
+                            y: (stroke[i].y / 1000) * canvas.height
+                        };
+                        ctx.lineTo(p.x, p.y);
+                    }
+                    ctx.stroke();
                 }
-                ctx.stroke();
             }
         }
-    }, [data, attachmentId, selectedAnnotation, currentPath, selectedColor, hideMarkup]);
+    }, [data, attachmentId, selectedAnnotation, currentPath, completedStrokes, selectedColor, hideMarkup]);
 
     // Resize canvas to match image
     useEffect(() => {
@@ -251,7 +256,7 @@ function MarkupEditor() {
     };
 
     const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
-        if (selectedAnnotation || mode === 'text-input' || storageStatus === 'block') return;
+        if (selectedAnnotation || storageStatus === 'block') return;
         e.preventDefault();
 
         const coords = getCanvasCoords(e);
@@ -290,11 +295,14 @@ function MarkupEditor() {
             return;
         }
 
-        // Simplify path
+        // Simplify stroke and append to completed strokes
         const simplified = raw.length <= 2 ? raw : simplifyPath(raw, 8);
-        const encoded = encodePoints(simplified);
-        setPendingPath(encoded);
-        setCurrentPath(simplified);
+        setCompletedStrokes(prev => {
+            const allStrokes = [...prev, simplified];
+            setPendingPath(encodeStrokes(allStrokes));
+            return allStrokes;
+        });
+        setCurrentPath([]);
         setMode('text-input');
 
         // Focus the note input
@@ -332,6 +340,7 @@ function MarkupEditor() {
         // Reset
         setPendingPath(null);
         setCurrentPath([]);
+        setCompletedStrokes([]);
         setNoteText('');
         setMode('idle');
     };
@@ -339,6 +348,7 @@ function MarkupEditor() {
     const handleCancelDraw = () => {
         setPendingPath(null);
         setCurrentPath([]);
+        setCompletedStrokes([]);
         setNoteText('');
         setMode('idle');
     };
@@ -496,7 +506,7 @@ function MarkupEditor() {
                 )}
                 {mode === 'text-input' && (
                     <span className="markup-toolbar-label" style={{ color: '#34C759', fontWeight: 600 }}>
-                        Add a note below
+                        Draw more or add a note
                     </span>
                 )}
             </div>

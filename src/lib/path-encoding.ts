@@ -23,10 +23,26 @@ export function encodePoints(points: Point[]): string {
 
 export function decodePoints(encoded: string): Point[] {
     if (!encoded) return [];
-    return encoded.split(';').map(s => {
-        const [x, y] = s.split(',').map(Number);
-        return { x, y };
-    });
+    return encoded.split('|').flatMap(stroke =>
+        stroke.split(';').map(s => {
+            const [x, y] = s.split(',').map(Number);
+            return { x, y };
+        })
+    );
+}
+
+export function decodeStrokes(encoded: string): Point[][] {
+    if (!encoded) return [];
+    return encoded.split('|').map(stroke =>
+        stroke.split(';').map(s => {
+            const [x, y] = s.split(',').map(Number);
+            return { x, y };
+        })
+    );
+}
+
+export function encodeStrokes(strokes: Point[][]): string {
+    return strokes.map(s => encodePoints(s)).join('|');
 }
 
 // Perpendicular distance from point to line segment

@@ -1,6 +1,6 @@
 import {Annotation} from '../types/power-up';
 import {COLORS} from './data-model';
-import {decodePoints, normToPixel} from './path-encoding';
+import {decodePoints, decodeStrokes, normToPixel} from './path-encoding';
 import {getPathCentroid} from './data-model';
 
 export interface RenderOptions {
@@ -25,8 +25,8 @@ export function renderAnnotationsOnCanvas(
         const alpha = isDimmed ? 0.25 : 1;
         const lineWidth = isSelected ? 4 : 2.5;
 
-        const points = decodePoints(annotation.p);
-        if (points.length === 0) continue;
+        const strokes = decodeStrokes(annotation.p);
+        if (strokes.length === 0) continue;
 
         ctx.save();
         ctx.globalAlpha = alpha;
@@ -36,22 +36,24 @@ export function renderAnnotationsOnCanvas(
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
 
-        if (points.length === 1) {
-            // Dot
-            const px = normToPixel(points[0].x, points[0].y, canvasWidth, canvasHeight);
-            ctx.beginPath();
-            ctx.arc(px.x, px.y, isSelected ? 6 : 4, 0, Math.PI * 2);
-            ctx.fill();
-        } else {
-            // Path
-            const firstPx = normToPixel(points[0].x, points[0].y, canvasWidth, canvasHeight);
-            ctx.beginPath();
-            ctx.moveTo(firstPx.x, firstPx.y);
-            for (let i = 1; i < points.length; i++) {
-                const px = normToPixel(points[i].x, points[i].y, canvasWidth, canvasHeight);
-                ctx.lineTo(px.x, px.y);
+        for (const stroke of strokes) {
+            if (stroke.length === 0) continue;
+            if (stroke.length === 1) {
+                // Dot
+                const px = normToPixel(stroke[0].x, stroke[0].y, canvasWidth, canvasHeight);
+                ctx.beginPath();
+                ctx.arc(px.x, px.y, isSelected ? 6 : 4, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                const firstPx = normToPixel(stroke[0].x, stroke[0].y, canvasWidth, canvasHeight);
+                ctx.beginPath();
+                ctx.moveTo(firstPx.x, firstPx.y);
+                for (let i = 1; i < stroke.length; i++) {
+                    const px = normToPixel(stroke[i].x, stroke[i].y, canvasWidth, canvasHeight);
+                    ctx.lineTo(px.x, px.y);
+                }
+                ctx.stroke();
             }
-            ctx.stroke();
         }
 
         ctx.restore();
