@@ -89,7 +89,7 @@ function MarkupEditor() {
                 const authorized = await restApi.isAuthorized();
                 if (authorized) {
                     const tok = await restApi.getToken();
-                    console.log('[MarkupEditor] auth token:', tok ? `${tok.substring(0, 8)}...` : 'NULL');
+
                     if (tok) {
                         setToken(tok);
                     } else {
@@ -113,7 +113,7 @@ function MarkupEditor() {
             const restApi = (t as any).getRestApi();
             await restApi.authorize({ scope: 'read' });
             const tok = await restApi.getToken();
-            console.log('[MarkupEditor] authorized, token:', tok ? `${tok.substring(0, 8)}...` : 'NULL');
+
             if (tok) {
                 setToken(tok);
                 setNeedsAuth(false);

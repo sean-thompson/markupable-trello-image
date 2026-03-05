@@ -40,7 +40,7 @@ If the output contains an `EADDRINUSE` error, go back to Step 2 — find and kil
 Once the tunnel URL is captured, tell the user:
 
 1. The new tunnel URL (prominently displayed)
-2. Remind them to update **two things** in the Power-Up admin at https://trello.com/power-ups/69a5778726e3aa6e351000d9/edit :
+2. Remind them to update **two things** in the Power-Up admin at https://trello.com/power-ups/admin :
    - **Iframe Connector URL** — paste the tunnel URL
    - **Allowed Origins** — paste the tunnel URL (needed for image auth)
 3. Confirm the dev server is running in the background
