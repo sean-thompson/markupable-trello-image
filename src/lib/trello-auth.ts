@@ -7,7 +7,7 @@
  * server-side where CORS doesn't apply.
  */
 export function getAuthenticatedUrl(url: string, token: string): string {
-    if (!process.env.POWERUP_APP_KEY || !token) return url;
+    if (!process.env.POWERUP_APP_KEY || process.env.POWERUP_APP_KEY === 'UNSPECIFIED' || !token) return url;
 
     try {
         const parsed = new URL(url);
