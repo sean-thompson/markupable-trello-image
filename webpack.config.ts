@@ -70,14 +70,15 @@ module.exports = (env: any) => {
         },
         devtool: !env.WEBPACK_BUILD ? 'source-map' : undefined,
         plugins: [
-            new webpack.EnvironmentPlugin([
-                'NODE_ENV',
-                'PORT',
-                'POWERUP_NAME',
-                'POWERUP_ID',
-                'POWERUP_APP_KEY',
-                'CONTEXT_PATH'
-            ]),
+            new webpack.EnvironmentPlugin({
+                'NODE_ENV': undefined,
+                'PORT': undefined,
+                'POWERUP_NAME': undefined,
+                'POWERUP_ID': undefined,
+                'POWERUP_APP_KEY': undefined,
+                'CONTEXT_PATH': undefined,
+                'TRELLO_IMAGE_PROXY_URL': '',
+            }),
             new CopyWebpackPlugin({
                 patterns: [
                     { from: 'static', to: 'static' },
