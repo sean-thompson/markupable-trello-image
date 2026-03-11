@@ -5,14 +5,11 @@ on:
 jobs:
   Build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     env:
       NODE_ENV: production
       PORT: 3000
       POWERUP_NAME: My Power-Up
-      POWERUP_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
-      CONTEXT_PATH: /${{ github.event.repository.name }}
+      POWERUP_URL: https://markupable-trello.pages.dev
       POWERUP_ID: UNSPECIFIED
       POWERUP_APP_KEY: ${{ secrets.POWERUP_APP_KEY }}
       TRELLO_IMAGE_PROXY_URL: ${{ vars.TRELLO_IMAGE_PROXY_URL }}
@@ -28,12 +25,11 @@ jobs:
           node-version: '20'
       - name: Install Packages
         run: yarn install --production=false
-      - name: Build GitHub Pages
+      - name: Build
         run: yarn build
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: gh-pages
-          folder: dist
-          clean: true
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=markupable-trello
