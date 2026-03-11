@@ -116,7 +116,7 @@ function CardButton() {
         }
 
         t.modal({
-            url: './markup-editor.html',
+            url: './markup-editor',
             args: {
                 attachmentId: attachment.id,
                 attachmentUrl: imageUrl,

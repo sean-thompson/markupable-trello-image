@@ -72,7 +72,7 @@ function AttachmentSection() {
         }
 
         t.modal({
-            url: './markup-editor.html',
+            url: './markup-editor',
             args: {
                 attachmentId: img.id,
                 attachmentUrl: imageUrl,

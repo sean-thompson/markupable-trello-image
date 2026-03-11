@@ -18,16 +18,16 @@ function PowerupRouter() {
             <TrelloProvider t={t}>
                 <Suspense fallback={<div style={{ margin: '6px' }}>Loading...</div>}>
                     <Router basename={process.env.CONTEXT_PATH || undefined}>
-                        <Route path="/attachment-section.html">
+                        <Route path="/attachment-section">
                             <AttachmentSection />
                         </Route>
-                        <Route path="/card-button.html">
+                        <Route path="/card-button">
                             <CardButton />
                         </Route>
-                        <Route path="/show-settings.html">
+                        <Route path="/show-settings">
                             <ShowSettings />
                         </Route>
-                        <Route path="/markup-editor.html">
+                        <Route path="/markup-editor">
                             <MarkupEditor />
                         </Route>
                     </Router>

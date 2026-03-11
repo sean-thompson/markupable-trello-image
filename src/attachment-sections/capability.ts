@@ -24,7 +24,7 @@ export async function getAttachmentSection(
             title: 'Marked-up Images',
             content: {
                 type: 'iframe',
-                url: t.signUrl('./attachment-section.html'),
+                url: t.signUrl('./attachment-section'),
                 height: 230
             }
         }];
