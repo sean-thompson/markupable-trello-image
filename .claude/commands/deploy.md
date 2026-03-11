@@ -1,5 +1,5 @@
 ---
-description: Deploy frontend (GitHub Pages) and/or image proxy (Cloudflare Worker)
+description: Deploy frontend (Cloudflare Pages) and/or image proxy (Cloudflare Worker)
 allowed-tools: Bash, Read, Glob, Grep, AskUserQuestion
 ---
 
@@ -18,7 +18,7 @@ Execute all steps below. Report progress as you go.
    Report the result (success or failure).
 4. If both are clean, report "Cloudflare Worker: nothing to deploy."
 
-## Step 2: Check GitHub Pages (frontend) for changes
+## Step 2: Check Cloudflare Pages (frontend) for changes
 
 1. Run `git status --short` to check for uncommitted/untracked changes.
 2. Run `git log origin/main..HEAD` to check for unpushed commits.
@@ -37,7 +37,7 @@ Execute all steps below. Report progress as you go.
    - Show the user the unpushed commits.
    - Push to origin/main.
 5. **If everything is clean and up-to-date:**
-   - Report "GitHub Pages: nothing to deploy."
+   - Report "Cloudflare Pages: nothing to deploy."
 
 ## Step 3: Offer release tagging
 
@@ -60,5 +60,5 @@ After completing Steps 1 and 2 (whether or not anything was deployed):
 
 Report a final summary of what was deployed:
 - Cloudflare Worker: deployed / nothing to do
-- GitHub Pages: pushed / nothing to do
+- Cloudflare Pages: pushed / nothing to do
 - Tag: created vX.Y.Z / skipped

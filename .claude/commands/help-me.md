@@ -17,7 +17,7 @@ Markupable is a Trello Power-Up that lets users annotate image attachments on Tr
 
 Two deployment targets:
 
-- **GitHub Pages** hosts the frontend (HTML/JS/CSS). Auto-deploys on push to `main` via a GitHub Actions workflow (`.github/workflows/deploy.yml`). The production URL is configured in the Trello Power-Up admin as the Iframe Connector URL.
+- **Cloudflare Pages** hosts the frontend (HTML/JS/CSS) at `https://markupable-trello.pages.dev`. Auto-deploys on push to `main` via a GitHub Actions workflow (`.github/workflows/build.yml`). The production URL is configured in the Trello Power-Up admin as the Iframe Connector URL.
 - **Cloudflare Workers** hosts the image proxy (`worker/` directory). Deployed manually via `cd worker && npx wrangler deploy`. The proxy fetches Trello attachment images server-side to avoid CORS blocks. Its URL is stored in the GitHub Actions variable `TRELLO_IMAGE_PROXY_URL` and injected at build time.
 
 ## Key slash commands
@@ -36,7 +36,7 @@ Two deployment targets:
 
 ## Switching back to production
 
-1. Restore the GitHub Pages URL in the Trello Power-Up admin (both Iframe Connector URL and Allowed Origins).
+1. Restore the Cloudflare Pages URL (`https://markupable-trello.pages.dev`) in the Trello Power-Up admin (both Iframe Connector URL and Allowed Origins).
 2. Kill the local dev server (Ctrl+C or close the terminal).
 
 ## Security precautions
