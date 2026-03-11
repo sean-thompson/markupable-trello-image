@@ -10,6 +10,7 @@ jobs:
       PORT: 3000
       POWERUP_NAME: My Power-Up
       POWERUP_URL: https://markupable-trello.pages.dev
+      CONTEXT_PATH: /
       POWERUP_ID: UNSPECIFIED
       POWERUP_APP_KEY: ${{ secrets.POWERUP_APP_KEY }}
       TRELLO_IMAGE_PROXY_URL: ${{ vars.TRELLO_IMAGE_PROXY_URL }}
