@@ -82,6 +82,7 @@ module.exports = (env: any) => {
             new CopyWebpackPlugin({
                 patterns: [
                     { from: 'static', to: 'static' },
+                    { from: '_headers', to: '.' },
                 ],
             }),
             new MiniCssExtractPlugin(),
